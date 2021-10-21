@@ -1,0 +1,67 @@
+kind: ConfigMap 
+apiVersion: v1 
+metadata:
+  name: my-web-config 
+  labels:
+    app: nginx
+data:
+  myweb.conf: |
+    server {
+        location / {
+            return 200 'Wellcome to Kubescape ! 22/10/2021';
+            add_header Content-Type text/plain;
+        }
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+        volumeMounts:
+        - name: basic-config
+          mountPath: /etc/nginx/conf.d/
+#          subPath: myweb.conf
+      volumes:
+        - name: basic-config
+          configMap:
+            name: my-web-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  ports:
+  - port: 80
+    nodePort: 30101
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx
+  type: NodePort
+  # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
+
+---
